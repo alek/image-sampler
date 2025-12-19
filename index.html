@@ -8,14 +8,12 @@
     :root{
       color-scheme: dark;
       --bg: #07080c;
-      --panel: #0c0f15;
       --border:#1f2433;
       --border2:#2a3146;
       --text:#e9ecf2;
       --muted:#9aa3b8;
       --muted2:#6f7892;
     }
-
     *{ box-sizing: border-box; }
     html, body{ height:100%; }
     body{
@@ -26,9 +24,7 @@
       font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       letter-spacing: 0.15px;
     }
-
     .wrap{ max-width: 1480px; margin: 0 auto; display:grid; gap: 12px; }
-
     .layout{
       display:grid;
       grid-template-columns: 420px 1fr;
@@ -38,13 +34,11 @@
     @media (max-width: 1100px){
       .layout{ grid-template-columns: 1fr; }
     }
-
     .panel{
       background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
       border: 1px solid var(--border);
       padding: 12px;
     }
-
     label{
       display:block;
       color: var(--muted);
@@ -53,17 +47,14 @@
       text-transform: uppercase;
       letter-spacing: 0.8px;
     }
-
     input[type='file'], input[type='range'], select{ width:100%; }
     input[type='range']{ accent-color: #ffffff; }
-
     input[type='file']{
       padding: 10px;
       border: 1px solid var(--border2);
       background: #06080d;
       color: var(--text);
     }
-
     select{
       padding: 10px;
       border: 1px solid var(--border2);
@@ -71,9 +62,7 @@
       color: var(--text);
       outline: none;
     }
-
     .controls{ display:grid; gap: 10px; }
-
     .row{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -82,14 +71,12 @@
     @media (max-width: 520px){
       .row{ grid-template-columns: 1fr; }
     }
-
     .buttons{
       display:flex;
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 6px;
     }
-
     button{
       appearance:none;
       border: 1px solid var(--border2);
@@ -113,7 +100,6 @@
       color: var(--muted);
       font-size: 12px;
     }
-
     .hint{ color: var(--muted2); font-size: 12px; margin-top: 8px; }
 
     /* history strip */
@@ -131,7 +117,6 @@
       padding-bottom: 2px;
       scrollbar-width: thin;
     }
-
     .thumbWrap{
       width: 56px;
       height: 56px;
@@ -150,7 +135,6 @@
     .thumbBtn:hover{ border-color:#3b4562; }
     .thumbBtn.active{ border-color:#ffffff; }
     .thumbBtn img{ width: 100%; height: 100%; object-fit: cover; display:block; }
-
     .thumbX{
       position:absolute;
       top: -7px;
@@ -171,7 +155,6 @@
       font-size: 12px;
     }
     .thumbX:hover{ border-color:#ffffff; }
-
     .historyMeta{
       display:flex;
       justify-content: space-between;
@@ -186,7 +169,6 @@
 
     /* Views */
     .viewsWrap{ display:grid; gap: 10px; }
-
     .metaBar{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -207,7 +189,6 @@
       .metaBar{ grid-template-columns: 1fr; }
       .metaLeft{ justify-content: flex-start; }
     }
-
     .views{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -217,7 +198,6 @@
       .views{ grid-template-columns: 1fr; }
       .metaBar{ gap: 10px; }
     }
-
     canvas{
       width: 100%;
       aspect-ratio: 1 / 1;
@@ -338,7 +318,7 @@
     const fctx = fftCanvas.getContext('2d', { alpha: false });
     const wctx = waveCanvas.getContext('2d', { alpha: false });
 
-    // Current renderable image source (ImageBitmap preferred for instant switching)
+    // Current renderable image source (ImageBitmap preferred)
     let img = null;
 
     let running = false;
@@ -348,8 +328,7 @@
 
     let currentCell = null;
 
-    // History (in-memory) — store a decoded ImageBitmap so switching is instant
-    // { id, key, url, name, bmp, w, h }
+    // History item: { id, key, url, name, bmp, gridN, fps }
     const history = [];
     let activeHistoryId = null;
     const MAX_HISTORY = 18;
@@ -410,7 +389,6 @@
       fillCanvas(wctx, waveCanvas);
     }
 
-    // Works for ImageBitmap / HTMLImageElement (anything with width/height)
     function computeSourceSquare(image){
       const sw = image.width;
       const sh = image.height;
@@ -512,6 +490,28 @@
     }
 
     // -------------------------
+    // Per-image settings persistence
+    // -------------------------
+    function activeItem(){
+      return history.find(h => h.id === activeHistoryId) || null;
+    }
+
+    function saveCurrentSettingsToActive(){
+      const it = activeItem();
+      if (!it) return;
+      it.gridN = Number(gridEl.value);
+      it.fps = Number(fpsEl.value);
+    }
+
+    function applySettingsFromItem(it){
+      const n = Math.min(64, Math.max(2, Number(it.gridN || 16)));
+      const fps = Math.min(60, Math.max(1, Number(it.fps || 24)));
+      gridEl.value = String(n);
+      fpsEl.value = String(fps);
+      updateLabels();
+    }
+
+    // -------------------------
     // History UI (instant switching + remove x)
     // -------------------------
     function revokeAndClose(item){
@@ -585,16 +585,11 @@
     }
 
     async function decodeToBitmap(fileOrBlob){
-      // Prefer ImageBitmap (fast draw, no decode delay on click)
       if (window.createImageBitmap){
         try{
           return await createImageBitmap(fileOrBlob);
-        } catch {
-          // fall through
-        }
+        } catch {}
       }
-
-      // Fallback: decode via HTMLImageElement (still ok; not as instant)
       const url = URL.createObjectURL(fileOrBlob);
       const im = new Image();
       im.decoding = 'async';
@@ -602,13 +597,11 @@
       await im.decode().catch(() => new Promise((res, rej) => { im.onload = res; im.onerror = rej; }));
       URL.revokeObjectURL(url);
 
-      // Draw to a bitmap-like canvas
       const c = document.createElement('canvas');
       c.width = im.naturalWidth;
       c.height = im.naturalHeight;
       const ctx = c.getContext('2d', { alpha:false });
       ctx.drawImage(im, 0, 0);
-      // This returns a canvas; drawImage supports it; width/height exist.
       return c;
     }
 
@@ -620,14 +613,12 @@
         return;
       }
 
-      // Create thumb URL immediately (for UI), but decode bitmap BEFORE inserting,
-      // so switching later is instantaneous.
       const thumbUrl = URL.createObjectURL(file);
 
       let bmp;
       try{
         bmp = await decodeToBitmap(file);
-      } catch (e){
+      } catch {
         try { URL.revokeObjectURL(thumbUrl); } catch {}
         alert('Could not decode that image.');
         return;
@@ -640,8 +631,9 @@
         url: thumbUrl,
         name: file.name,
         bmp,
-        w: bmp.width,
-        h: bmp.height
+        // initialize per-image settings from current UI
+        gridN: Number(gridEl.value),
+        fps: Number(fpsEl.value),
       };
 
       history.unshift(item);
@@ -658,9 +650,14 @@
       const item = history.find(h => h.id === id);
       if (!item) return;
 
-      // Instant: img is already decoded ImageBitmap/canvas
+      // save current UI settings into the currently-active item BEFORE switching away
+      saveCurrentSettingsToActive();
+
       activeHistoryId = id;
       img = item.bmp;
+
+      // apply per-image settings (grid + fps) immediately
+      applySettingsFromItem(item);
 
       currentCell = null;
       lastTime = 0;
@@ -675,7 +672,7 @@
     }
 
     // -------------------------
-    // 2D FFT
+    // 2D FFT (unchanged)
     // -------------------------
     function bitReverse(x, bits){
       let y = 0;
@@ -824,7 +821,7 @@
     }
 
     // -------------------------
-    // Audio + waveform (flat when silent)
+    // Audio + waveform (flat when silent) — unchanged
     // -------------------------
     function ensureAudio(){
       if (audioCtx) return true;
@@ -1042,10 +1039,14 @@
 
     gridEl.addEventListener('input', () => {
       updateLabels();
+      saveCurrentSettingsToActive();
       if (img) stepOnce();
     });
 
-    fpsEl.addEventListener('input', updateLabels);
+    fpsEl.addEventListener('input', () => {
+      updateLabels();
+      saveCurrentSettingsToActive();
+    });
 
     fftSizeEl.addEventListener('change', () => {
       if (img) drawFFTFromProjector();
@@ -1072,7 +1073,6 @@
     fileEl.addEventListener('change', async (e) => {
       const f = e.target.files && e.target.files[0];
       if (!f) return;
-      // decode first, then insert => later switching is instantaneous
       await addToHistoryFromFile(f);
       fileEl.value = '';
     });
@@ -1095,6 +1095,9 @@
     });
 
     stepBtn.addEventListener('click', stepOnce);
+
+    // Save per-image settings before leaving the page
+    window.addEventListener('beforeunload', () => saveCurrentSettingsToActive());
   </script>
 </body>
 </html>
