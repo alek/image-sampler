@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width,initial-scale=1' />
+  <title>Grid Sampler</title>
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg: #07080c;
+      --panel: #0c0f15;
+      --border:#1f2433;
+      --border2:#2a3146;
+      --text:#e9ecf2;
+      --muted:#9aa3b8;
+      --muted2:#6f7892;
+    }
+
+    *{ box-sizing: border-box; }
+    html, body{ height:100%; }
+    body{
+      margin:0;
+      padding:18px;
+      background: radial-gradient(1200px 600px at 20% 0%, #0b1020 0%, var(--bg) 55%) no-repeat, var(--bg);
+      color: var(--text);
+      font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      letter-spacing: 0.15px;
+    }
+
+    .wrap{ max-width: 1480px; margin: 0 auto; display:grid; gap: 12px; }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap: 12px;
+      align-items:start;
+    }
+    @media (max-width: 1100px){
+      .layout{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+      border: 1px solid var(--border);
+      padding: 12px;
+    }
+
+    label{
+      display:block;
+      color: var(--muted);
+      font-size: 11px;
+      margin: 0 0 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    input[type='file'], input[type='range'], select{ width:100%; }
+    input[type='range']{ accent-color: #ffffff; }
+
+    input[type='file']{
+      padding: 10px;
+      border: 1px solid var(--border2);
+      background: #06080d;
+      color: var(--text);
+    }
+
+    select{
+      padding: 10px;
+      border: 1px solid var(--border2);
+      background: #06080d;
+      color: var(--text);
+      outline: none;
+    }
+
+    .controls{ display:grid; gap: 10px; }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 520px){
+      .row{ grid-template-columns: 1fr; }
+    }
+
+    .buttons{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    button{
+      appearance:none;
+      border: 1px solid var(--border2);
+      background: #06080d;
+      color: var(--text);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      transition: transform 0.06s ease, background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+    }
+    button:hover{ background: #0a0d14; border-color: #3b4562; }
+    button:active{ transform: translateY(1px); }
+    button:disabled{ opacity: .45; cursor:not-allowed; }
+
+    .status{
+      margin-top: 8px;
+      padding: 10px;
+      border: 1px solid var(--border2);
+      background: #06080d;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .hint{ color: var(--muted2); font-size: 12px; margin-top: 8px; }
+
+    /* history strip */
+    .history{
+      border: 1px solid var(--border2);
+      background: #06080d;
+      padding: 8px;
+      display:grid;
+      gap: 8px;
+    }
+    .historyRow{
+      display:flex;
+      gap: 8px;
+      overflow:auto;
+      padding-bottom: 2px;
+      scrollbar-width: thin;
+    }
+
+    .thumbWrap{
+      width: 56px;
+      height: 56px;
+      position: relative;
+      flex: 0 0 auto;
+    }
+    .thumbBtn{
+      width: 56px;
+      height: 56px;
+      border: 1px solid var(--border2);
+      background: #05060a;
+      padding: 0;
+      cursor: pointer;
+      display:block;
+    }
+    .thumbBtn:hover{ border-color:#3b4562; }
+    .thumbBtn.active{ border-color:#ffffff; }
+    .thumbBtn img{ width: 100%; height: 100%; object-fit: cover; display:block; }
+
+    .thumbX{
+      position:absolute;
+      top: -7px;
+      right: -7px;
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--border2);
+      background: #06080d;
+      color: var(--text);
+      font-weight: 900;
+      line-height: 18px;
+      padding: 0;
+      cursor: pointer;
+      user-select: none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 12px;
+    }
+    .thumbX:hover{ border-color:#ffffff; }
+
+    .historyMeta{
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted2);
+      font-size: 12px;
+    }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      letter-spacing: 0;
+    }
+
+    /* Views */
+    .viewsWrap{ display:grid; gap: 10px; }
+
+    .metaBar{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items:center;
+    }
+    .metaLeft{
+      display:flex;
+      justify-content: flex-end;
+      color: var(--muted2);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .metaLeft .mono{ color: var(--muted); }
+    @media (max-width: 980px){
+      .metaBar{ grid-template-columns: 1fr; }
+      .metaLeft{ justify-content: flex-start; }
+    }
+
+    .views{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 980px){
+      .views{ grid-template-columns: 1fr; }
+      .metaBar{ gap: 10px; }
+    }
+
+    canvas{
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #05060a;
+      border: 1px solid var(--border);
+      image-rendering: pixelated;
+      display:block;
+    }
+  </style>
+</head>
+<body>
+  <div class='wrap'>
+    <div class='layout'>
+      <div class='panel'>
+        <div class='controls'>
+          <div>
+            <label>Image</label>
+            <input id='file' type='file' accept='image/*' />
+          </div>
+
+          <div class='history'>
+            <div class='historyMeta'>
+              <span>Previously used</span>
+              <span class='mono' id='historyCount'>0</span>
+            </div>
+            <div class='historyRow' id='historyRow'></div>
+          </div>
+
+          <div class='row'>
+            <div>
+              <label>Grid (N×N)</label>
+              <input id='grid' type='range' min='2' max='64' step='1' value='16' />
+            </div>
+            <div>
+              <label>FPS</label>
+              <input id='fps' type='range' min='1' max='60' step='1' value='24' />
+            </div>
+          </div>
+
+          <div class='row'>
+            <div>
+              <label>Sound level</label>
+              <input id='gain' type='range' min='0' max='1' step='0.01' value='0.45' />
+            </div>
+            <div>
+              <label>FFT resolution</label>
+              <select id='fftSize'>
+                <option value='64'>64×64</option>
+                <option value='128' selected>128×128</option>
+                <option value='256'>256×256</option>
+              </select>
+            </div>
+          </div>
+
+          <div class='buttons'>
+            <button id='start' disabled>Start</button>
+            <button id='stop' disabled>Stop</button>
+            <button id='step' disabled>Step</button>
+            <button id='audioEnable'>Enable audio</button>
+            <button id='beepTest' disabled>Beep</button>
+          </div>
+
+          <div class='status' id='audioStatus'>Audio: not initialized</div>
+          <div class='hint'>Tip: click once anywhere (to satisfy browser audio policy), then press Enable audio.</div>
+        </div>
+      </div>
+
+      <div class='panel'>
+        <div class='viewsWrap'>
+          <div class='metaBar'>
+            <div class='metaLeft'>
+              <span class='mono'>cell=<span id='cellOut'>—</span> · N=<span id='gridOut'>16×16</span> · fps=<span id='fpsOut'>24</span></span>
+            </div>
+            <div></div>
+          </div>
+
+          <div class='views'>
+            <canvas id='gridCanvas'></canvas>
+            <canvas id='projCanvas'></canvas>
+            <canvas id='fftCanvas'></canvas>
+            <canvas id='waveCanvas'></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const fileEl = $('file');
+    const gridEl = $('grid');
+    const fpsEl = $('fps');
+    const gainEl = $('gain');
+    const fftSizeEl = $('fftSize');
+
+    const gridOut = $('gridOut');
+    const fpsOut = $('fpsOut');
+    const cellOut = $('cellOut');
+
+    const startBtn = $('start');
+    const stopBtn = $('stop');
+    const stepBtn = $('step');
+    const audioBtn = $('audioEnable');
+    const beepBtn = $('beepTest');
+    const audioStatusEl = $('audioStatus');
+
+    const historyRowEl = $('historyRow');
+    const historyCountEl = $('historyCount');
+
+    const gridCanvas = $('gridCanvas');
+    const projCanvas = $('projCanvas');
+    const fftCanvas = $('fftCanvas');
+    const waveCanvas = $('waveCanvas');
+
+    const gctx = gridCanvas.getContext('2d', { alpha: false });
+    const pctx = projCanvas.getContext('2d', { alpha: false });
+    const fctx = fftCanvas.getContext('2d', { alpha: false });
+    const wctx = waveCanvas.getContext('2d', { alpha: false });
+
+    // Current renderable image source (ImageBitmap preferred for instant switching)
+    let img = null;
+
+    let running = false;
+    let rafId = null;
+    let lastTime = 0;
+    let frameIntervalMs = 1000 / Number(fpsEl.value);
+
+    let currentCell = null;
+
+    // History (in-memory) — store a decoded ImageBitmap so switching is instant
+    // { id, key, url, name, bmp, w, h }
+    const history = [];
+    let activeHistoryId = null;
+    const MAX_HISTORY = 18;
+
+    // Offscreen helper for FFT input
+    const fftSrc = document.createElement('canvas');
+    const fftSrcCtx = fftSrc.getContext('2d', { alpha: false });
+
+    // Offscreen helper for sonification sampling
+    const sonicCanvas = document.createElement('canvas');
+    const sonicCtx = sonicCanvas.getContext('2d', { alpha: false });
+
+    // Audio
+    let audioCtx = null;
+    let masterGain = null;
+    let audioEnabled = false;
+
+    function setAudioStatus(msg){
+      let state = 'none';
+      if (audioCtx) state = audioCtx.state;
+      audioStatusEl.textContent = `Audio: ${state} · enabled=${audioEnabled ? 'yes' : 'no'}${msg ? ' · ' + msg : ''}`;
+    }
+
+    function updateLabels(){
+      const n = Number(gridEl.value);
+      gridOut.textContent = `${n}×${n}`;
+      fpsOut.textContent = `${fpsEl.value}`;
+      frameIntervalMs = 1000 / Number(fpsEl.value);
+    }
+
+    function syncCanvasesToCss(){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const canvases = [gridCanvas, projCanvas, fftCanvas, waveCanvas];
+      for (const c of canvases){
+        const css = c.getBoundingClientRect();
+        const w = Math.max(1, Math.floor(css.width * dpr));
+        const h = Math.max(1, Math.floor(css.height * dpr));
+        if (c.width !== w || c.height !== h){
+          c.width = w; c.height = h;
+        }
+      }
+      gctx.imageSmoothingEnabled = true;
+      pctx.imageSmoothingEnabled = false;
+      fctx.imageSmoothingEnabled = false;
+      wctx.imageSmoothingEnabled = false;
+    }
+
+    function fillCanvas(ctx, canvas){
+      ctx.fillStyle = '#05060a';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+
+    function clearCanvases(){
+      syncCanvasesToCss();
+      fillCanvas(gctx, gridCanvas);
+      fillCanvas(pctx, projCanvas);
+      fillCanvas(fctx, fftCanvas);
+      fillCanvas(wctx, waveCanvas);
+    }
+
+    // Works for ImageBitmap / HTMLImageElement (anything with width/height)
+    function computeSourceSquare(image){
+      const sw = image.width;
+      const sh = image.height;
+      const s = Math.min(sw, sh);
+      return { sx: (sw - s) / 2, sy: (sh - s) / 2, ss: s };
+    }
+
+    function drawGridView(){
+      if (!img) return;
+      syncCanvasesToCss();
+
+      const n = Number(gridEl.value);
+      const { sx, sy, ss } = computeSourceSquare(img);
+
+      const W = gridCanvas.width;
+      const H = gridCanvas.height;
+
+      gctx.clearRect(0,0,W,H);
+      gctx.imageSmoothingEnabled = true;
+      gctx.drawImage(img, sx, sy, ss, ss, 0, 0, W, H);
+
+      gctx.save();
+      gctx.globalAlpha = 0.35;
+      gctx.strokeStyle = '#ffffff';
+      gctx.lineWidth = Math.max(1, Math.floor(Math.min(W,H) / 1200));
+      for (let i=1;i<n;i++){
+        const tx = (i*W)/n;
+        const ty = (i*H)/n;
+        gctx.beginPath(); gctx.moveTo(tx,0); gctx.lineTo(tx,H); gctx.stroke();
+        gctx.beginPath(); gctx.moveTo(0,ty); gctx.lineTo(W,ty); gctx.stroke();
+      }
+      gctx.restore();
+
+      if (currentCell){
+        const cellW = W / n;
+        const cellH = H / n;
+        const x0 = currentCell.x * cellW;
+        const y0 = currentCell.y * cellH;
+
+        gctx.save();
+        gctx.globalAlpha = 0.15;
+        gctx.fillStyle = '#ffffff';
+        gctx.fillRect(x0, y0, cellW, cellH);
+
+        gctx.globalAlpha = 0.95;
+        gctx.strokeStyle = '#ffffff';
+        gctx.lineWidth = Math.max(2, Math.floor(Math.min(W,H) / 360));
+        gctx.strokeRect(x0 + 0.5, y0 + 0.5, cellW - 1, cellH - 1);
+        gctx.restore();
+      }
+    }
+
+    function projectCell(cellX, cellY){
+      if (!img) return;
+      syncCanvasesToCss();
+
+      const n = Number(gridEl.value);
+      const { sx, sy, ss } = computeSourceSquare(img);
+
+      const cellSize = ss / n;
+      const srcX = sx + cellX * cellSize;
+      const srcY = sy + cellY * cellSize;
+
+      const W = projCanvas.width;
+      const H = projCanvas.height;
+
+      pctx.clearRect(0,0,W,H);
+      pctx.imageSmoothingEnabled = false;
+      pctx.drawImage(img, srcX, srcY, cellSize, cellSize, 0, 0, W, H);
+
+      currentCell = { x: cellX, y: cellY };
+      cellOut.textContent = `${cellX},${cellY}`;
+
+      drawGridView();
+      drawFFTFromProjector();
+
+      if (audioEnabled) sonifyFromProjector();
+      else drawSilenceWaveform();
+    }
+
+    function stepOnce(){
+      if (!img) return;
+      const n = Number(gridEl.value);
+      const cellX = (Math.random() * n) | 0;
+      const cellY = (Math.random() * n) | 0;
+      projectCell(cellX, cellY);
+    }
+
+    function loop(t){
+      if (!running) return;
+      if (!lastTime) lastTime = t;
+      const dt = t - lastTime;
+
+      if (dt >= frameIntervalMs){
+        lastTime = t - (dt % frameIntervalMs);
+        stepOnce();
+      }
+      rafId = requestAnimationFrame(loop);
+    }
+
+    // -------------------------
+    // History UI (instant switching + remove x)
+    // -------------------------
+    function revokeAndClose(item){
+      try { URL.revokeObjectURL(item.url); } catch {}
+      try { if (item.bmp && typeof item.bmp.close === 'function') item.bmp.close(); } catch {}
+    }
+
+    function removeHistoryItem(id){
+      const idx = history.findIndex(h => h.id === id);
+      if (idx < 0) return;
+
+      const [removed] = history.splice(idx, 1);
+      revokeAndClose(removed);
+
+      if (activeHistoryId === id){
+        activeHistoryId = null;
+        img = null;
+        currentCell = null;
+        running = false;
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null;
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+        stepBtn.disabled = true;
+        clearCanvases();
+        drawSilenceWaveform();
+
+        if (history.length){
+          setActiveImage(history[0].id);
+        }
+      }
+
+      renderHistory();
+    }
+
+    function renderHistory(){
+      historyRowEl.innerHTML = '';
+      historyCountEl.textContent = String(history.length);
+
+      for (const item of history){
+        const wrap = document.createElement('div');
+        wrap.className = 'thumbWrap';
+
+        const btn = document.createElement('button');
+        btn.className = 'thumbBtn' + (item.id === activeHistoryId ? ' active' : '');
+        btn.type = 'button';
+        btn.title = item.name || 'image';
+
+        const imEl = document.createElement('img');
+        imEl.src = item.url;
+        imEl.alt = item.name || 'image';
+
+        btn.appendChild(imEl);
+        btn.addEventListener('click', () => setActiveImage(item.id));
+
+        const x = document.createElement('button');
+        x.className = 'thumbX';
+        x.type = 'button';
+        x.title = 'Remove';
+        x.textContent = '×';
+        x.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          ev.preventDefault();
+          removeHistoryItem(item.id);
+        });
+
+        wrap.appendChild(btn);
+        wrap.appendChild(x);
+        historyRowEl.appendChild(wrap);
+      }
+    }
+
+    async function decodeToBitmap(fileOrBlob){
+      // Prefer ImageBitmap (fast draw, no decode delay on click)
+      if (window.createImageBitmap){
+        try{
+          return await createImageBitmap(fileOrBlob);
+        } catch {
+          // fall through
+        }
+      }
+
+      // Fallback: decode via HTMLImageElement (still ok; not as instant)
+      const url = URL.createObjectURL(fileOrBlob);
+      const im = new Image();
+      im.decoding = 'async';
+      im.src = url;
+      await im.decode().catch(() => new Promise((res, rej) => { im.onload = res; im.onerror = rej; }));
+      URL.revokeObjectURL(url);
+
+      // Draw to a bitmap-like canvas
+      const c = document.createElement('canvas');
+      c.width = im.naturalWidth;
+      c.height = im.naturalHeight;
+      const ctx = c.getContext('2d', { alpha:false });
+      ctx.drawImage(im, 0, 0);
+      // This returns a canvas; drawImage supports it; width/height exist.
+      return c;
+    }
+
+    async function addToHistoryFromFile(file){
+      const key = `${file.name}|${file.size}|${file.lastModified || 0}`;
+      const existing = history.find(h => h.key === key);
+      if (existing){
+        setActiveImage(existing.id);
+        return;
+      }
+
+      // Create thumb URL immediately (for UI), but decode bitmap BEFORE inserting,
+      // so switching later is instantaneous.
+      const thumbUrl = URL.createObjectURL(file);
+
+      let bmp;
+      try{
+        bmp = await decodeToBitmap(file);
+      } catch (e){
+        try { URL.revokeObjectURL(thumbUrl); } catch {}
+        alert('Could not decode that image.');
+        return;
+      }
+
+      const id = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      const item = {
+        id,
+        key,
+        url: thumbUrl,
+        name: file.name,
+        bmp,
+        w: bmp.width,
+        h: bmp.height
+      };
+
+      history.unshift(item);
+
+      while (history.length > MAX_HISTORY){
+        const dropped = history.pop();
+        revokeAndClose(dropped);
+      }
+
+      setActiveImage(id);
+    }
+
+    function setActiveImage(id){
+      const item = history.find(h => h.id === id);
+      if (!item) return;
+
+      // Instant: img is already decoded ImageBitmap/canvas
+      activeHistoryId = id;
+      img = item.bmp;
+
+      currentCell = null;
+      lastTime = 0;
+
+      renderHistory();
+      drawGridView();
+      stepOnce();
+
+      startBtn.disabled = false;
+      stepBtn.disabled = false;
+      stopBtn.disabled = !running ? true : false;
+    }
+
+    // -------------------------
+    // 2D FFT
+    // -------------------------
+    function bitReverse(x, bits){
+      let y = 0;
+      for (let i=0;i<bits;i++){
+        y = (y << 1) | (x & 1);
+        x >>>= 1;
+      }
+      return y;
+    }
+
+    function fft1d(re, im){
+      const n = re.length;
+      const levels = Math.log2(n) | 0;
+      if ((1 << levels) !== n) throw new Error('fft1d size must be power of 2');
+
+      for (let i=0;i<n;i++){
+        const j = bitReverse(i, levels);
+        if (j > i){
+          [re[i], re[j]] = [re[j], re[i]];
+          [im[i], im[j]] = [im[j], im[i]];
+        }
+      }
+
+      for (let size=2; size<=n; size<<=1){
+        const half = size >>> 1;
+        const theta = -2 * Math.PI / size;
+        const wtemp = Math.sin(0.5 * theta);
+        const wpr = -2.0 * wtemp * wtemp;
+        const wpi = Math.sin(theta);
+
+        for (let i=0; i<n; i+=size){
+          let wr = 1.0, wi = 0.0;
+          for (let j=0; j<half; j++){
+            const l = i + j;
+            const r = l + half;
+
+            const tr = wr * re[r] - wi * im[r];
+            const ti = wr * im[r] + wi * re[r];
+
+            re[r] = re[l] - tr;
+            im[r] = im[l] - ti;
+            re[l] = re[l] + tr;
+            im[l] = im[l] + ti;
+
+            const wrNext = wr + wr * wpr - wi * wpi;
+            const wiNext = wi + wi * wpr + wr * wpi;
+            wr = wrNext;
+            wi = wiNext;
+          }
+        }
+      }
+    }
+
+    function fft2d(re, im, N){
+      const rowRe = new Float32Array(N);
+      const rowIm = new Float32Array(N);
+
+      for (let y=0;y<N;y++){
+        const off = y*N;
+        for (let x=0;x<N;x++){
+          rowRe[x] = re[off+x];
+          rowIm[x] = im[off+x];
+        }
+        fft1d(rowRe, rowIm);
+        for (let x=0;x<N;x++){
+          re[off+x] = rowRe[x];
+          im[off+x] = rowIm[x];
+        }
+      }
+
+      const colRe = new Float32Array(N);
+      const colIm = new Float32Array(N);
+
+      for (let x=0;x<N;x++){
+        for (let y=0;y<N;y++){
+          colRe[y] = re[y*N+x];
+          colIm[y] = im[y*N+x];
+        }
+        fft1d(colRe, colIm);
+        for (let y=0;y<N;y++){
+          re[y*N+x] = colRe[y];
+          im[y*N+x] = colIm[y];
+        }
+      }
+    }
+
+    function drawFFTFromProjector(){
+      if (!img) return;
+
+      const N = Number(fftSizeEl.value);
+      fftSrc.width = N;
+      fftSrc.height = N;
+
+      fftSrcCtx.imageSmoothingEnabled = true;
+      fftSrcCtx.drawImage(projCanvas, 0, 0, projCanvas.width, projCanvas.height, 0, 0, N, N);
+      const imgData = fftSrcCtx.getImageData(0,0,N,N).data;
+
+      const re = new Float32Array(N*N);
+      const im = new Float32Array(N*N);
+
+      for (let i=0, p=0; i<N*N; i++, p+=4){
+        const r = imgData[p+0], g = imgData[p+1], b = imgData[p+2];
+        re[i] = (0.2126*r + 0.7152*g + 0.0722*b) / 255.0;
+        im[i] = 0.0;
+      }
+
+      fft2d(re, im, N);
+
+      syncCanvasesToCss();
+      const outW = fftCanvas.width;
+      const outH = fftCanvas.height;
+      const out = fctx.createImageData(outW, outH);
+
+      let maxMag = 1e-9;
+      for (let y=0;y<N;y++){
+        for (let x=0;x<N;x++){
+          const sx = (x + (N>>1)) & (N-1);
+          const sy = (y + (N>>1)) & (N-1);
+          const v = sy*N + sx;
+          const mag = Math.log(1 + Math.hypot(re[v], im[v]));
+          if (mag > maxMag) maxMag = mag;
+        }
+      }
+
+      for (let y=0;y<outH;y++){
+        const fy = Math.floor(y * N / outH);
+        for (let x=0;x<outW;x++){
+          const fx = Math.floor(x * N / outW);
+          const sx = (fx + (N>>1)) & (N-1);
+          const sy = (fy + (N>>1)) & (N-1);
+          const v = sy*N + sx;
+
+          const mag = Math.log(1 + Math.hypot(re[v], im[v]));
+          const norm = mag / maxMag;
+          const c = Math.max(0, Math.min(255, Math.floor(norm * 255)));
+
+          const o = (y*outW + x)*4;
+          out.data[o+0] = c;
+          out.data[o+1] = c;
+          out.data[o+2] = c;
+          out.data[o+3] = 255;
+        }
+      }
+
+      fctx.putImageData(out, 0, 0);
+    }
+
+    // -------------------------
+    // Audio + waveform (flat when silent)
+    // -------------------------
+    function ensureAudio(){
+      if (audioCtx) return true;
+      try{
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = Number(gainEl.value);
+        masterGain.connect(audioCtx.destination);
+        setAudioStatus('initialized');
+        return true;
+      } catch (e){
+        alert('AudioContext not available in this browser.');
+        return false;
+      }
+    }
+
+    async function resumeAudio(){
+      if (!ensureAudio()) return false;
+      try{
+        if (audioCtx.state !== 'running') await audioCtx.resume();
+        audioEnabled = (audioCtx.state === 'running');
+        setAudioStatus(audioEnabled ? 'running' : 'blocked');
+        beepBtn.disabled = !audioEnabled;
+        if (audioEnabled) drawSilenceWaveform();
+        return audioEnabled;
+      } catch {
+        audioEnabled = false;
+        setAudioStatus('resume failed');
+        return false;
+      }
+    }
+
+    function installAutoUnlock(){
+      const unlock = async () => { await resumeAudio(); };
+      window.addEventListener('pointerdown', unlock, { once: true });
+      window.addEventListener('keydown', unlock, { once: true });
+      window.addEventListener('touchstart', unlock, { once: true, passive: true });
+    }
+
+    function drawSilenceWaveform(){
+      syncCanvasesToCss();
+      const W = waveCanvas.width;
+      const H = waveCanvas.height;
+
+      wctx.fillStyle = '#05060a';
+      wctx.fillRect(0,0,W,H);
+
+      wctx.strokeStyle = '#ffffff';
+      wctx.globalAlpha = 0.65;
+      wctx.lineWidth = Math.max(1, Math.floor(H / 520));
+      wctx.beginPath();
+      const y = Math.floor(H/2) + 0.5;
+      wctx.moveTo(0, y);
+      wctx.lineTo(W, y);
+      wctx.stroke();
+      wctx.globalAlpha = 1.0;
+    }
+
+    function drawWaveform(samples){
+      syncCanvasesToCss();
+      const W = waveCanvas.width;
+      const H = waveCanvas.height;
+
+      wctx.fillStyle = '#05060a';
+      wctx.fillRect(0,0,W,H);
+
+      wctx.strokeStyle = '#ffffff';
+      wctx.globalAlpha = 0.9;
+      wctx.lineWidth = Math.max(1, Math.floor(H / 420));
+      wctx.beginPath();
+
+      const n = samples.length;
+      for (let x=0;x<W;x++){
+        const i = Math.floor(x * n / W);
+        const v = samples[i];
+        const y = (H/2) - v * (H*0.44);
+        if (x === 0) wctx.moveTo(x, y);
+        else wctx.lineTo(x, y);
+      }
+      wctx.stroke();
+      wctx.globalAlpha = 1.0;
+    }
+
+    function sonifyFromProjector(){
+      if (!audioEnabled || !audioCtx || audioCtx.state !== 'running') {
+        setAudioStatus('not running');
+        drawSilenceWaveform();
+        return;
+      }
+
+      const S = 64;
+      sonicCanvas.width = S;
+      sonicCanvas.height = S;
+
+      sonicCtx.imageSmoothingEnabled = true;
+      sonicCtx.drawImage(projCanvas, 0, 0, projCanvas.width, projCanvas.height, 0, 0, S, S);
+      const d = sonicCtx.getImageData(0,0,S,S).data;
+
+      let meanLum = 0;
+      for (let i=0, p=0; i<S*S; i++, p+=4){
+        const r = d[p+0], g = d[p+1], b = d[p+2];
+        meanLum += (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+      }
+      meanLum /= (S*S);
+
+      const duration = 0.09;
+      const sr = audioCtx.sampleRate;
+      const len = Math.max(1024, Math.floor(sr * duration));
+
+      const samples = new Float32Array(len);
+      const totalPix = S*S;
+
+      let prev = 0;
+      let peak = 0;
+
+      for (let i=0;i<len;i++){
+        const p = (i % totalPix) * 4;
+        const r = d[p+0], g = d[p+1], b = d[p+2];
+        const lum = (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+
+        let v = (lum - meanLum) * 2.0;
+        v = prev + 0.18 * (v - prev);
+        prev = v;
+
+        const t = i / (len - 1);
+        const win = 0.5 - 0.5 * Math.cos(2 * Math.PI * t);
+        v *= win;
+
+        samples[i] = v;
+        const a = Math.abs(v);
+        if (a > peak) peak = a;
+      }
+
+      if (peak < 1e-4){
+        drawSilenceWaveform();
+        return;
+      }
+
+      const target = 0.75;
+      const gg = target / peak;
+      for (let i=0;i<len;i++) samples[i] *= gg;
+
+      drawWaveform(samples);
+
+      const buf = audioCtx.createBuffer(1, len, sr);
+      buf.getChannelData(0).set(samples);
+
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 60;
+
+      const lp = audioCtx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 7000;
+
+      src.connect(hp);
+      hp.connect(lp);
+      lp.connect(masterGain);
+
+      masterGain.gain.value = Number(gainEl.value);
+
+      const now = audioCtx.currentTime;
+      src.start(now);
+      src.stop(now + duration);
+    }
+
+    async function beepTest(){
+      if (!audioEnabled || !audioCtx || audioCtx.state !== 'running') {
+        setAudioStatus('beep blocked');
+        return;
+      }
+      masterGain.gain.value = Number(gainEl.value);
+
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 440;
+
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.7, audioCtx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.18);
+
+      osc.connect(g);
+      g.connect(masterGain);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.2);
+
+      setAudioStatus('beep ok');
+    }
+
+    // -------------------------
+    // wiring
+    // -------------------------
+    updateLabels();
+    clearCanvases();
+    drawSilenceWaveform();
+    installAutoUnlock();
+    setAudioStatus();
+    renderHistory();
+
+    window.addEventListener('resize', () => {
+      if (!img){
+        clearCanvases();
+        drawSilenceWaveform();
+        return;
+      }
+      drawGridView();
+      if (currentCell) projectCell(currentCell.x, currentCell.y);
+      else stepOnce();
+    });
+
+    gridEl.addEventListener('input', () => {
+      updateLabels();
+      if (img) stepOnce();
+    });
+
+    fpsEl.addEventListener('input', updateLabels);
+
+    fftSizeEl.addEventListener('change', () => {
+      if (img) drawFFTFromProjector();
+    });
+
+    gainEl.addEventListener('input', () => {
+      if (masterGain) masterGain.gain.value = Number(gainEl.value);
+      if (!audioEnabled || Number(gainEl.value) === 0) drawSilenceWaveform();
+    });
+
+    audioBtn.addEventListener('click', async () => {
+      const ok = await resumeAudio();
+      if (ok) {
+        audioBtn.textContent = 'Audio enabled';
+        audioBtn.disabled = true;
+        await beepTest();
+      } else {
+        alert('Audio is still blocked. Click once anywhere on the page, then press Enable audio again.');
+      }
+    });
+
+    beepBtn.addEventListener('click', beepTest);
+
+    fileEl.addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      // decode first, then insert => later switching is instantaneous
+      await addToHistoryFromFile(f);
+      fileEl.value = '';
+    });
+
+    startBtn.addEventListener('click', () => {
+      if (!img || running) return;
+      running = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      lastTime = 0;
+      rafId = requestAnimationFrame(loop);
+    });
+
+    stopBtn.addEventListener('click', () => {
+      running = false;
+      stopBtn.disabled = true;
+      startBtn.disabled = false;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+    });
+
+    stepBtn.addEventListener('click', stepOnce);
+  </script>
+</body>
+</html>
